@@ -102,6 +102,22 @@ public class MediaListServiceImpl implements MediaListService {
       Optional<MediaEntity> media = mediaRepository.findById(mediaId);
       if (media.isEmpty()) return false;
       newMediaEntities.add(media.get());
+      newMediaList.setMediaEntities(newMediaEntities);
+      mediaListRepository.save(newMediaList);
+      return true;
+    } else return false;
+  }
+
+  @Override
+  public Boolean removeMediaToList(Long id, Long mediaId) {
+    Optional<MediaListEntity> mediaList = mediaListRepository.findById(id);
+    if (mediaList.isPresent()) {
+      MediaListEntity newMediaList = mediaList.get();
+      List<MediaEntity> newMediaEntities = newMediaList.getMediaEntities();
+      Optional<MediaEntity> media = mediaRepository.findById(mediaId);
+      if (media.isEmpty()) return false;
+      newMediaEntities.remove(media.get());
+      newMediaList.setMediaEntities(newMediaEntities);
       mediaListRepository.save(newMediaList);
       return true;
     } else return false;

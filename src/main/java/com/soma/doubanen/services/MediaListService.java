@@ -22,4 +22,6 @@ public interface MediaListService {
   List<MediaListEntity> findByUserId(Long userId);
 
   Boolean addMediaToList(Long id, Long mediaEntity);
+
+    Boolean removeMediaToList(Long id, Long mediaId);
 }

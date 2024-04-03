@@ -27,11 +27,11 @@ public class MediaListController {
   private final Mapper<MediaEntity, MediaDto> mediaMapper;
 
   public MediaListController(
-      MediaListService mediaListService,
-      TokenService tokenService,
-      UserService userService,
-      Mapper<MediaListEntity, MediaListDto> mediaListMapper,
-      Mapper<MediaEntity, MediaDto> mediaMapper) {
+          MediaListService mediaListService,
+          TokenService tokenService,
+          UserService userService,
+          Mapper<MediaListEntity, MediaListDto> mediaListMapper,
+          Mapper<MediaEntity, MediaDto> mediaMapper) {
     this.mediaListService = mediaListService;
     this.tokenService = tokenService;
     this.userService = userService;
@@ -41,8 +41,8 @@ public class MediaListController {
 
   @PostMapping()
   public ResponseEntity<MediaListDto> createMediaList(
-      @RequestBody MediaListDto mediaListDto, @RequestHeader(name = "Authorization") String auth)
-      throws Exception {
+          @RequestBody MediaListDto mediaListDto, @RequestHeader(name = "Authorization") String auth)
+          throws Exception {
     String token = auth.substring(7);
     String username = tokenService.extractUsername(token);
     if (!username.equals(userService.getUsernameById(mediaListDto.getUser().getId())))
@@ -50,22 +50,22 @@ public class MediaListController {
     MediaListEntity mediaList = mediaListMapper.mapFrom(mediaListDto);
     Optional<MediaListEntity> result = mediaListService.save(mediaList, null);
     return result
-        .map(
-            mediaListEntity ->
-                new ResponseEntity<>(mediaListMapper.mapTo(mediaListEntity), HttpStatus.CREATED))
-        .orElseGet(() -> new ResponseEntity<>(HttpStatus.BAD_REQUEST));
+            .map(
+                    mediaListEntity ->
+                            new ResponseEntity<>(mediaListMapper.mapTo(mediaListEntity), HttpStatus.CREATED))
+            .orElseGet(() -> new ResponseEntity<>(HttpStatus.BAD_REQUEST));
   }
 
   @GetMapping(path = "/{id}")
   public ResponseEntity<MediaListDto> getMediaList(@PathVariable("id") Long id) {
     Optional<MediaListEntity> foundMediaList = mediaListService.findOne(id);
     return foundMediaList
-        .map(
-            mediaListEntity -> {
-              MediaListDto mediaListDto = mediaListMapper.mapTo(mediaListEntity);
-              return new ResponseEntity<>(mediaListDto, HttpStatus.OK);
-            })
-        .orElse(new ResponseEntity<>(HttpStatus.NOT_FOUND));
+            .map(
+                    mediaListEntity -> {
+                      MediaListDto mediaListDto = mediaListMapper.mapTo(mediaListEntity);
+                      return new ResponseEntity<>(mediaListDto, HttpStatus.OK);
+                    })
+            .orElse(new ResponseEntity<>(HttpStatus.NOT_FOUND));
   }
 
   @GetMapping()
@@ -76,10 +76,10 @@ public class MediaListController {
 
   @PutMapping(path = "/{id}")
   public ResponseEntity<MediaListDto> updateMediaList(
-      @PathVariable("id") Long id,
-      @RequestBody MediaListDto mediaListDto,
-      @RequestHeader(name = "Authorization") String auth)
-      throws Exception {
+          @PathVariable("id") Long id,
+          @RequestBody MediaListDto mediaListDto,
+          @RequestHeader(name = "Authorization") String auth)
+          throws Exception {
     if (mediaListService.notExists(id)) {
       return new ResponseEntity<>(HttpStatus.NOT_FOUND);
     }
@@ -90,17 +90,17 @@ public class MediaListController {
     MediaListEntity entity = mediaListMapper.mapFrom(mediaListDto);
     Optional<MediaListEntity> result = mediaListService.save(entity, id);
     return result
-        .map(
-            mediaListEntity ->
-                new ResponseEntity<>(mediaListMapper.mapTo(mediaListEntity), HttpStatus.CREATED))
-        .orElseGet(() -> new ResponseEntity<>(HttpStatus.BAD_REQUEST));
+            .map(
+                    mediaListEntity ->
+                            new ResponseEntity<>(mediaListMapper.mapTo(mediaListEntity), HttpStatus.CREATED))
+            .orElseGet(() -> new ResponseEntity<>(HttpStatus.BAD_REQUEST));
   }
 
   @PatchMapping(path = "/{id}")
   public ResponseEntity<MediaListDto> partialUpdateMediaList(
-      @PathVariable("id") Long id,
-      @RequestBody MediaListDto mediaListDto,
-      @RequestHeader(name = "Authorization") String auth) {
+          @PathVariable("id") Long id,
+          @RequestBody MediaListDto mediaListDto,
+          @RequestHeader(name = "Authorization") String auth) {
     if (mediaListService.notExists(id)) {
       return new ResponseEntity<>(HttpStatus.NOT_FOUND);
     }
@@ -115,13 +115,13 @@ public class MediaListController {
 
   @DeleteMapping(path = "/{id}")
   public ResponseEntity<Void> deleteMediaList(
-      @PathVariable("id") Long id, @RequestHeader(name = "Authorization") String auth) {
+          @PathVariable("id") Long id, @RequestHeader(name = "Authorization") String auth) {
     Optional<MediaListEntity> mediaListEntity = mediaListService.findOne(id);
     if (mediaListEntity.isPresent()) {
       String token = auth.substring(7);
       String username = tokenService.extractUsername(token);
       if (!username.equals(
-          userService.getUsernameById(mediaListEntity.get().getUserEntity().getId())))
+              userService.getUsernameById(mediaListEntity.get().getUserEntity().getId())))
         return new ResponseEntity<>(HttpStatus.UNAUTHORIZED);
     }
     mediaListService.delete(id);
@@ -134,45 +134,67 @@ public class MediaListController {
   }
 
   @GetMapping(
-      path = "/{id}",
-      params = {"page", "size"})
+          path = "/{id}",
+          params = {"page", "size"})
   public ResponseEntity<List<MediaDto>> getMediaEntitiesWithPagination(
-      @PathVariable("id") Long id, @RequestParam Long page, @RequestParam Long size) {
+          @PathVariable("id") Long id, @RequestParam Long page, @RequestParam Long size) {
     Optional<MediaListEntity> foundMediaList = mediaListService.findOne(id);
     return foundMediaList
-        .map(
-            mediaListEntity ->
-                new ResponseEntity<>(
-                    mediaListEntity.getMediaEntities().stream()
-                        .skip((page - 1) * size)
-                        .limit(size)
-                        .map(mediaMapper::mapTo)
-                        .collect(Collectors.toList()),
-                    HttpStatus.OK))
-        .orElseGet(() -> new ResponseEntity<>(HttpStatus.NOT_FOUND));
+            .map(
+                    mediaListEntity ->
+                            new ResponseEntity<>(
+                                    mediaListEntity.getMediaEntities().stream()
+                                            .skip((page - 1) * size)
+                                            .limit(size)
+                                            .map(mediaMapper::mapTo)
+                                            .collect(Collectors.toList()),
+                                    HttpStatus.OK))
+            .orElseGet(() -> new ResponseEntity<>(HttpStatus.NOT_FOUND));
   }
 
   @GetMapping(params = "userId")
   public List<MediaListDto> getUserLists(@RequestParam Long userId) {
     return mediaListService.findByUserId(userId).stream()
-        .map(mediaListMapper::mapTo)
-        .collect(Collectors.toList());
+            .map(mediaListMapper::mapTo)
+            .collect(Collectors.toList());
   }
 
   @PostMapping(path = "/{id}/add-media", params = "mediaId")
   public ResponseEntity<Void> addMediaToList(
-      @PathVariable("id") Long id,
-      @RequestParam Long mediaId,
-      @RequestHeader(name = "Authorization") String auth) {
+          @PathVariable("id") Long id,
+          @RequestParam Long mediaId,
+          @RequestHeader(name = "Authorization") String auth) {
     Optional<MediaListEntity> mediaListEntity = mediaListService.findOne(id);
     if (mediaListEntity.isPresent()) {
       String token = auth.substring(7);
       String username = tokenService.extractUsername(token);
       if (!username.equals(
-          userService.getUsernameById(mediaListEntity.get().getUserEntity().getId())))
+              userService.getUsernameById(mediaListEntity.get().getUserEntity().getId())))
+        return new ResponseEntity<>(HttpStatus.UNAUTHORIZED);
+      MediaListEntity mediaList = mediaListEntity.get();
+      List<MediaEntity> mediaEntities = mediaList.getMediaEntities();
+      if (mediaEntities.stream().anyMatch(mediaEntity -> mediaEntity.getId().equals(mediaId)))
+        return new ResponseEntity<>(HttpStatus.CONFLICT);
+      Boolean flag = mediaListService.addMediaToList(id, mediaId);
+      if (flag) return new ResponseEntity<>(HttpStatus.CREATED);
+    }
+    return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
+  }
+
+  @DeleteMapping(path = "/{id}/delete-media", params = "mediaId")
+  public ResponseEntity<Void> removeMediaToList(
+          @PathVariable("id") Long id,
+          @RequestParam Long mediaId,
+          @RequestHeader(name = "Authorization") String auth) {
+    Optional<MediaListEntity> mediaListEntity = mediaListService.findOne(id);
+    if (mediaListEntity.isPresent()) {
+      String token = auth.substring(7);
+      String username = tokenService.extractUsername(token);
+      if (!username.equals(
+              userService.getUsernameById(mediaListEntity.get().getUserEntity().getId())))
         return new ResponseEntity<>(HttpStatus.UNAUTHORIZED);
     }
-    Boolean flag = mediaListService.addMediaToList(id, mediaId);
+    Boolean flag = mediaListService.removeMediaToList(id, mediaId);
     if (flag) return new ResponseEntity<>(HttpStatus.CREATED);
     else {
       return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
