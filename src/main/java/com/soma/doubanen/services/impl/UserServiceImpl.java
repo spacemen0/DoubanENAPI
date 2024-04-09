@@ -69,6 +69,8 @@ public class UserServiceImpl implements UserService {
               Optional.ofNullable(userEntity.getEmail()).ifPresent(existingUser::setEmail);
               Optional.ofNullable(userEntity.getPassword()).ifPresent(existingUser::setPassword);
               Optional.ofNullable(userEntity.getUsername()).ifPresent(existingUser::setUsername);
+              Optional.ofNullable(userEntity.getBio()).ifPresent(existingUser::setBio);
+              Optional.ofNullable(userEntity.getProfileImageUrl()).ifPresent(existingUser::setProfileImageUrl);
               return existingUser;
             })
         .orElseThrow(() -> new RuntimeException("User not fund"));
