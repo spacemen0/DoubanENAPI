@@ -23,7 +23,7 @@ public class ImageServiceImpl implements ImageService {
     this.imageRepository = imageRepository;
   }
 
-  public  byte[] compressImage(byte[] data) throws IOException {
+  public byte[] compressImage(byte[] data) throws IOException {
     Deflater deflater = new Deflater();
     deflater.setLevel(Deflater.BEST_COMPRESSION);
     deflater.setInput(data);
@@ -41,7 +41,7 @@ public class ImageServiceImpl implements ImageService {
     return outputStream.toByteArray();
   }
 
-  public  byte[] decompressImage(byte[] data) throws DataFormatException, IOException {
+  public byte[] decompressImage(byte[] data) throws DataFormatException, IOException {
     Inflater inflater = new Inflater();
     inflater.setInput(data);
     ByteArrayOutputStream outputStream = new ByteArrayOutputStream(data.length);
@@ -66,10 +66,10 @@ public class ImageServiceImpl implements ImageService {
     Long objectId = imageEntity.getObjectId();
     ImageType type = imageEntity.getType();
     if (objectId != null && type != null) {
-      Optional<ImageEntity> image = imageRepository.findByObjectIdAndType(objectId,type);
+      Optional<ImageEntity> image = imageRepository.findByObjectIdAndType(objectId, type);
       if (image.isEmpty()) {
         return imageRepository.save(imageEntity);
-      }else{
+      } else {
         ImageEntity savedImage = image.get();
         savedImage.setImageData(imageEntity.getImageData());
         return imageRepository.save(savedImage);
@@ -78,8 +78,5 @@ public class ImageServiceImpl implements ImageService {
     return null;
   }
 
-  @Override
-  public void deleteById(Long id) {
-    imageRepository.deleteById(id);
-  }
+
 }

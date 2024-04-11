@@ -79,7 +79,7 @@ public class ReviewServiceImpl implements ReviewService {
                 existingReviewEntity.setContent(reviewEntity.getContent());
               if (reviewEntity.getUser() != null)
                 existingReviewEntity.setUser(reviewEntity.getUser());
-              return existingReviewEntity;
+              return reviewRepository.save(existingReviewEntity);
             })
         .orElseThrow(() -> new RuntimeException("Review not found"));
   }

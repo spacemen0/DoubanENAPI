@@ -2,6 +2,7 @@ package com.soma.doubanen.controllers;
 
 import com.soma.doubanen.domains.dto.ImageDto;
 import com.soma.doubanen.domains.entities.ImageEntity;
+import com.soma.doubanen.domains.enums.ImageType;
 import com.soma.doubanen.mappers.Mapper;
 import com.soma.doubanen.services.ImageService;
 import java.io.IOException;
@@ -11,6 +12,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 @RestController
 @RequestMapping("/images")
@@ -41,5 +43,22 @@ public class ImageController {
     } else {
       return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Not Found");
     }
+  }
+
+  @PostMapping(consumes = {"multipart/form-data"})
+  public ResponseEntity<?> uploadImage(
+      @RequestParam("image") MultipartFile image,
+      @RequestParam("objectId") Long objectId,
+      @RequestParam("type") ImageType type) {
+    byte[] data;
+    try {
+      data = imageService.compressImage(image.getBytes());
+    } catch (IOException e) {
+      return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+          .body("Error compressing image data");
+    }
+    ImageDto imageDto = ImageDto.builder().imageData(data).objectId(objectId).type(type).build();
+    return new ResponseEntity<>(
+        imageMapper.mapTo(imageService.save(imageMapper.mapFrom(imageDto))), HttpStatus.OK);
   }
 }

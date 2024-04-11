@@ -15,5 +15,5 @@ public interface ImageService {
 
   ImageEntity save(ImageEntity imageEntity);
 
-  void deleteById(Long id);
+
 }

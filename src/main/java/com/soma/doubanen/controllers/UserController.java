@@ -16,6 +16,7 @@ import java.util.Optional;
 import java.util.stream.Collectors;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -32,22 +33,27 @@ public class UserController {
   private final TokenService tokenService;
   private final Mapper<UserEntity, UserDto> userMapper;
 
+  private final PasswordEncoder passwordEncoder;
+
   public UserController(
       UserService userService,
       AuthService authService,
       ImageService imageService,
       TokenService tokenService,
-      Mapper<UserEntity, UserDto> userMapper) {
+      Mapper<UserEntity, UserDto> userMapper,
+      PasswordEncoder passwordEncoder) {
     this.userService = userService;
     this.authService = authService;
     this.imageService = imageService;
     this.tokenService = tokenService;
     this.userMapper = userMapper;
+    this.passwordEncoder = passwordEncoder;
   }
 
   @PostMapping
   public ResponseEntity<AuthResponse> createUser(@RequestBody UserDto userDto) {
     UserEntity userEntity = userMapper.mapFrom(userDto);
+    userEntity.setPassword(passwordEncoder.encode(userEntity.getPassword()));
     return new ResponseEntity<>(authService.register(userEntity), HttpStatus.CREATED);
   }
 
@@ -79,6 +85,9 @@ public class UserController {
       return new ResponseEntity<>(HttpStatus.UNAUTHORIZED);
     userDto.setId(id);
     UserEntity userEntity = userMapper.mapFrom(userDto);
+    if (userEntity.getPassword() != null) {
+      userEntity.setPassword(passwordEncoder.encode(userEntity.getPassword()));
+    }
     UserEntity savedUserEntity = userService.save(userEntity);
     return new ResponseEntity<>(userMapper.mapTo(savedUserEntity), HttpStatus.OK);
   }
@@ -89,7 +98,7 @@ public class UserController {
   public ResponseEntity<?> partialUpdateUser(
       @PathVariable("id") Long id,
       @ModelAttribute UserDto userDto,
-      @RequestParam("image") MultipartFile image,
+      @RequestParam(value = "image", required = false) MultipartFile image,
       @RequestHeader(name = "Authorization") String auth) {
     if (userService.notExists(id)) {
       return new ResponseEntity<>(HttpStatus.NOT_FOUND);
@@ -98,24 +107,50 @@ public class UserController {
     String username = tokenService.extractUsername(token);
     if (!username.equals(userService.getUsernameById(id)))
       return new ResponseEntity<>(HttpStatus.UNAUTHORIZED);
-    byte[] data;
-    try {
-      data = imageService.compressImage(image.getBytes());
-    } catch (IOException e) {
-      return new ResponseEntity<>("Error compressing image", HttpStatus.INTERNAL_SERVER_ERROR);
+    ImageEntity savedImage = null;
+    if (image != null) {
+      byte[] data;
+      try {
+        data = imageService.compressImage(image.getBytes());
+      } catch (IOException e) {
+        return new ResponseEntity<>("Error compressing image", HttpStatus.INTERNAL_SERVER_ERROR);
+      }
+      ImageEntity imageEntity =
+          ImageEntity.builder().imageData(data).objectId(id).type(ImageType.UserProfile).build();
+      savedImage = imageService.save(imageEntity);
     }
-    ImageEntity imageEntity =
-        ImageEntity.builder().imageData(data).objectId(id).type(ImageType.UserProfile).build();
-    ImageEntity savedImage = imageService.save(imageEntity);
     UserEntity userEntity = userMapper.mapFrom(userDto);
-    userEntity.setProfileImageUrl("/images/" + savedImage.getId());
+    if (userEntity.getPassword() != null) {
+      userEntity.setPassword(passwordEncoder.encode(userEntity.getPassword()));
+    }
+    if (savedImage != null) {
+      userEntity.setProfileImageUrl("/images/" + savedImage.getId());
+    }
     UserEntity updatedUser = userService.partialUpdate(userEntity, id);
     return new ResponseEntity<>(userMapper.mapTo(updatedUser), HttpStatus.OK);
   }
 
   @DeleteMapping("/{id}")
-  public ResponseEntity<Void> deleteUser(@PathVariable("id") Long id) {
+  public ResponseEntity<Void> deleteUser(
+      @PathVariable("id") Long id, @RequestHeader(name = "Authorization") String auth) {
+    String token = auth.substring(7);
+    String username = tokenService.extractUsername(token);
+    if (!username.equals(userService.getUsernameById(id)))
+      return new ResponseEntity<>(HttpStatus.UNAUTHORIZED);
     userService.delete(id);
     return new ResponseEntity<>(HttpStatus.NO_CONTENT);
+  }
+
+  @PostMapping("/check-password")
+  public ResponseEntity<Boolean> checkPassword(
+      @RequestBody UserDto userDto, @RequestHeader(name = "Authorization") String auth) {
+    String token = auth.substring(7);
+    String username = tokenService.extractUsername(token);
+    if (!username.equals(userService.getUsernameById(userDto.getId())))
+      return new ResponseEntity<>(HttpStatus.UNAUTHORIZED);
+    if (userService.checkPassword(userDto.getId(), userDto.getPassword())) {
+      return new ResponseEntity<>(true, HttpStatus.OK);
+    }
+    return new ResponseEntity<>(false, HttpStatus.FORBIDDEN);
   }
 }

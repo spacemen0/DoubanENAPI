@@ -5,10 +5,12 @@ import com.soma.doubanen.domains.enums.ImageType;
 import java.util.Optional;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
+import org.springframework.transaction.annotation.Transactional;
 
 @Repository
+@Transactional
 public interface ImageRepository extends JpaRepository<ImageEntity, Long> {
 
-  boolean existsByObjectIdAndType(Long objectId, ImageType imageType);
+  void deleteAllByObjectIdAndType(Long objectId,ImageType type);
   Optional<ImageEntity>findByObjectIdAndType(Long objectId,ImageType type);
 }

@@ -19,4 +19,6 @@ public interface UserService {
   void delete(Long id);
 
   UserEntity partialUpdate(UserEntity userEntity, Long id);
+
+  boolean checkPassword(Long id, String password);
 }
