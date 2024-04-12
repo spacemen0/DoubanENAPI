@@ -11,6 +11,7 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional
 public interface ImageRepository extends JpaRepository<ImageEntity, Long> {
 
-  void deleteAllByObjectIdAndType(Long objectId,ImageType type);
-  Optional<ImageEntity>findByObjectIdAndType(Long objectId,ImageType type);
+  void deleteAllByObjectIdAndType(Long objectId, ImageType type);
+
+  Optional<ImageEntity> findByObjectIdAndType(Long objectId, ImageType type);
 }

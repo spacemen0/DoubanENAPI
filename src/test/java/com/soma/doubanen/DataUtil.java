@@ -139,7 +139,7 @@ public final class DataUtil {
     return authResponse.getToken();
   }
 
-  public static String obtainStandardAccessToken(AuthService authService){
+  public static String obtainStandardAccessToken(AuthService authService) {
     UserEntity request =
         UserEntity.builder()
             .email("admin@email.com")

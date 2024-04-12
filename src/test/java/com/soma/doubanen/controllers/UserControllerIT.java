@@ -16,12 +16,16 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
+import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers;
+import org.springframework.util.LinkedMultiValueMap;
+import org.springframework.util.MultiValueMap;
 
 @SpringBootTest
 @ExtendWith(SpringExtension.class)
@@ -102,9 +106,7 @@ public class UserControllerIT {
     mockMvc
         .perform(
             MockMvcRequestBuilders.put("/users/" + savedUser.getId())
-                .header(
-                    HttpHeaders.AUTHORIZATION,
-                    "Bearer " + token)
+                .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(userJson))
         .andExpect(MockMvcResultMatchers.status().isOk());
@@ -113,24 +115,26 @@ public class UserControllerIT {
     assertThat((foundUser).get().getUsername()).isEqualTo("UpdatedName");
   }
 
-//  @Test
-//  public void partiallyUpdateUserSuccessfullyReturnsHTTPOK() throws Exception {
-//    UserEntity userEntity = DataUtil.CreateUserA();
-//    userEntity.setUsername("UpdatedName");
-//    UserEntity savedUser = userService.save(userEntity);
-//    savedUser.setUsername(null);
-//    String userJson = objectMapper.writeValueAsString(userMapper.mapTo(savedUser));
-//    mockMvc
-//        .perform(
-//            MockMvcRequestBuilders.patch("/users/" + savedUser.getId())
-//                .header(
-//                    HttpHeaders.AUTHORIZATION,
-//                    "Bearer " + DataUtil.obtainAdminAccessToken(authService))
-//                .contentType(MediaType.APPLICATION_JSON)
-//                .content(userJson))
-//        .andExpect(MockMvcResultMatchers.status().isOk());
-//    Optional<UserEntity> foundUser = userService.findOne(1L);
-//    assertThat(foundUser).isPresent();
-//    assertThat(foundUser.get().getUsername()).isEqualTo("UpdatedName");
-//  }
+  @Test
+  public void partiallyUpdateUserSuccessfullyReturnsHTTPOK() throws Exception {
+    String token = DataUtil.obtainAdminAccessToken(authService);
+    Optional<UserEntity> userEntity = userService.findOne(1L);
+    assertThat(userEntity).isPresent();
+    UserEntity savedUser = userEntity.get();
+    savedUser.setUsername("UpdatedName");
+    MockMultipartFile mockFile =
+        new MockMultipartFile("image", "filename.txt", "text/plain", "some image data".getBytes());
+    MultiValueMap<String, String> formData = new LinkedMultiValueMap<>();
+    formData.add("username", savedUser.getUsername());
+    mockMvc
+        .perform(
+            MockMvcRequestBuilders.multipart(HttpMethod.PATCH, "/users/" + savedUser.getId())
+                .file(mockFile)
+                .params(formData)
+                .header(HttpHeaders.AUTHORIZATION, "Bearer " + token))
+        .andExpect(MockMvcResultMatchers.status().isOk());
+    Optional<UserEntity> foundUser = userService.findOne(1L);
+    assertThat(foundUser).isPresent();
+    assertThat(foundUser.get().getUsername()).isEqualTo("UpdatedName");
+  }
 }

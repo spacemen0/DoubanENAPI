@@ -23,5 +23,5 @@ public interface MediaListService {
 
   Boolean addMediaToList(Long id, Long mediaEntity);
 
-    Boolean removeMediaToList(Long id, Long mediaId);
+  Boolean removeMediaToList(Long id, Long mediaId);
 }

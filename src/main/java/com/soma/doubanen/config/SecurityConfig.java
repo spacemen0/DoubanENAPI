@@ -53,7 +53,8 @@ public class SecurityConfig {
                     .permitAll()
                     .requestMatchers("/auth/login", "/auth/register")
                     .permitAll()
-                    .requestMatchers("/media-lists/**", "/media-statuses/**", "/reviews/**","/users/**")
+                    .requestMatchers(
+                        "/media-lists/**", "/media-statuses/**", "/reviews/**", "/users/**")
                     .hasAnyAuthority("Standard", "Admin")
                     .requestMatchers("/**")
                     .hasAuthority("Admin")

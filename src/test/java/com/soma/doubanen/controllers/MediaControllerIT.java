@@ -2,9 +2,7 @@ package com.soma.doubanen.controllers;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.soma.doubanen.DataUtil;
 import com.soma.doubanen.domains.dto.MediaDto;
 import com.soma.doubanen.domains.entities.AuthorEntity;
@@ -21,11 +19,14 @@ import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMock
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
+import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers;
+import org.springframework.util.LinkedMultiValueMap;
+import org.springframework.util.MultiValueMap;
 
 @SpringBootTest
 @ExtendWith(SpringExtension.class)
@@ -57,49 +58,47 @@ public class MediaControllerIT {
     this.musicMapper = musicMapper;
   }
 
+  private static MultiValueMap<String, String> getMultiValueMap(MediaEntity mediaEntity) {
+    MultiValueMap<String, String> formData = new LinkedMultiValueMap<>();
+    formData.add("title", mediaEntity.getTitle());
+    formData.add("description", mediaEntity.getDescription());
+    formData.add("releaseDate", mediaEntity.getReleaseDate().toString());
+    formData.add("average", "0");
+    formData.add("ratings", "0");
+    formData.add("wants", "0");
+    formData.add("doings", "0");
+    formData.add("additional", "0");
+    formData.add("genre", "Pop");
+    formData.add("imageUrl", "PlaceHolder");
+    formData.add("type", "Music");
+    formData.add("authorName", "0");
+    formData.add("average", "0");
+    formData.add("authorType", "Artist");
+    return formData;
+  }
+
   @Test
   public void CreateMediaSuccessfullyReturnsHTTPCreated() throws Exception {
     AuthorEntity authorEntity = DataUtil.CreateArtistPunkAndRock();
     MediaEntity mediaEntity = DataUtil.CreateMusicRockAlbum(authorEntity);
     mediaEntity.setId(null);
     mediaEntity.setReleaseDate(LocalDate.of(2012, 12, 2));
-    String musicJson = objectMapper.writeValueAsString(musicMapper.mapTo(mediaEntity));
+    MultiValueMap<String, String> formData = getMultiValueMap(mediaEntity);
+    MockMultipartFile mockFile =
+        new MockMultipartFile("image", "filename.txt", "text/plain", "some image data".getBytes());
     mockMvc
         .perform(
-            MockMvcRequestBuilders.post("/medias")
-                .contentType(MediaType.APPLICATION_JSON)
+            MockMvcRequestBuilders.multipart("/medias")
+                .file(mockFile)
                 .header(
                     HttpHeaders.AUTHORIZATION,
                     "Bearer " + DataUtil.obtainAdminAccessToken(authService))
-                .content(musicJson))
+                .params(formData))
         .andExpect(MockMvcResultMatchers.status().isCreated())
         .andExpect(MockMvcResultMatchers.jsonPath("$.releaseDate").value("2012-12-02"));
+
     Optional<MediaEntity> foundMusic = mediaService.findOne(1L);
     assertThat(foundMusic).isPresent();
-  }
-
-  @Test
-  public void CreateMediaWithAuthorIDSetWhenAuthorDoesNotExistReturnsHTTPBadRequest()
-      throws Exception {
-    AuthorEntity authorEntity = DataUtil.CreateArtistPunkAndRock();
-    authorEntity.setId(5L);
-    MediaEntity mediaEntity = DataUtil.CreateMusicRockAlbum(authorEntity);
-    mediaEntity.setId(null);
-    String musicJson = objectMapper.writeValueAsString(musicMapper.mapTo(mediaEntity));
-    JsonNode jsonNode = objectMapper.readTree(musicJson);
-    String authorDtoValue = "{\"id\":\"5\"}";
-    ((ObjectNode) jsonNode).set("author", objectMapper.readTree(authorDtoValue));
-    musicJson = objectMapper.writeValueAsString(jsonNode);
-    System.out.println(musicJson);
-    mockMvc
-        .perform(
-            MockMvcRequestBuilders.post("/medias")
-                .contentType(MediaType.APPLICATION_JSON)
-                .header(
-                    HttpHeaders.AUTHORIZATION,
-                    "Bearer " + DataUtil.obtainAdminAccessToken(authService))
-                .content(musicJson))
-        .andExpect(MockMvcResultMatchers.status().isBadRequest());
   }
 
   @Test

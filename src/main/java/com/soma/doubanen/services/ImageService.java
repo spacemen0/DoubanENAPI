@@ -14,6 +14,4 @@ public interface ImageService {
   Optional<ImageEntity> findById(Long id);
 
   ImageEntity save(ImageEntity imageEntity);
-
-
 }

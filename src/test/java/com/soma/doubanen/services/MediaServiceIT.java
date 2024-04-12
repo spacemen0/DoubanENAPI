@@ -22,8 +22,7 @@ public class MediaServiceIT {
   private final MediaService mediaService;
 
   @Autowired
-  public MediaServiceIT(
-      MediaService mediaService) {
+  public MediaServiceIT(MediaService mediaService) {
     this.mediaService = mediaService;
   }
 
@@ -40,5 +39,4 @@ public class MediaServiceIT {
     List<MediaEntity> musicEntities = Arrays.asList(mediaEntity1, mediaEntity2);
     assertThat(mediaService.findAll().toString()).isEqualTo(musicEntities.toString());
   }
-
 }
