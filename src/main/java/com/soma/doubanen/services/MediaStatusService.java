@@ -25,8 +25,8 @@ public interface MediaStatusService {
 
   Long countByTypeAndUserIdAndStatus(MediaType type, Long userId, MediaStatus status);
 
-  List<MediaStatusEntity> findByTypeAndUserIdAndStatus(
-      MediaType type, Long userId, MediaStatus status);
+  Page<MediaStatusEntity> findByTypeAndUserIdAndStatus(
+      MediaType type, Long userId, MediaStatus status, Pageable pageable);
 
   Optional<MediaStatusEntity> findByUserIdAndMediaId(Long userId, Long mediaId);
 

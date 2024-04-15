@@ -2,6 +2,7 @@ package com.soma.doubanen.services.impl;
 
 import com.soma.doubanen.domains.entities.ReviewEntity;
 import com.soma.doubanen.domains.entities.UserEntity;
+import com.soma.doubanen.domains.enums.MediaType;
 import com.soma.doubanen.repositories.ReviewRepository;
 import com.soma.doubanen.repositories.UserRepository;
 import com.soma.doubanen.services.ReviewService;
@@ -42,12 +43,22 @@ public class ReviewServiceImpl implements ReviewService {
   }
 
   @Override
+  public Page<ReviewEntity> findAllByUserIdAndType(Long userId, MediaType type, Pageable pageable) {
+    return reviewRepository.findByUserIdAndType(userId, type, pageable);
+  }
+
+  @Override
   public void deleteByUserIdAndMediaId(Long userId, Long mediaId) {
     reviewRepository.deleteByUserIdAndMediaId(userId, mediaId);
   }
 
   public Long countAllByMediaId(Long mediaId) {
     return reviewRepository.countByMediaId(mediaId);
+  }
+
+  @Override
+  public Long countAllByUserIdAndMediaType(Long userId, MediaType type) {
+    return reviewRepository.countByUserIdAndType(userId, type);
   }
 
   @Override

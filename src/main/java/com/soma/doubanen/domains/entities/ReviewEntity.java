@@ -1,5 +1,6 @@
 package com.soma.doubanen.domains.entities;
 
+import com.soma.doubanen.domains.enums.MediaType;
 import jakarta.persistence.*;
 import java.time.LocalDate;
 import lombok.AllArgsConstructor;
@@ -13,7 +14,7 @@ import lombok.NoArgsConstructor;
 @Data
 @Entity
 @Table(
-    name = "review",
+    name = "reviews",
     uniqueConstraints = {@UniqueConstraint(columnNames = {"media_id", "user_id"})})
 public class ReviewEntity {
   @Id
@@ -27,6 +28,9 @@ public class ReviewEntity {
 
   @Column(nullable = false)
   private Long mediaId;
+
+  @Enumerated(EnumType.STRING)
+  private MediaType type;
 
   @Column(nullable = false)
   private String title;

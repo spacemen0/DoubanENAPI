@@ -2,6 +2,7 @@ package com.soma.doubanen.controllers;
 
 import com.soma.doubanen.domains.dto.ReviewDto;
 import com.soma.doubanen.domains.entities.ReviewEntity;
+import com.soma.doubanen.domains.enums.MediaType;
 import com.soma.doubanen.mappers.Mapper;
 import com.soma.doubanen.services.ReviewService;
 import com.soma.doubanen.services.TokenService;
@@ -126,11 +127,31 @@ public class ReviewController {
     return new ResponseEntity<>(reviewService.countAllByMediaId(mediaId), HttpStatus.OK);
   }
 
+  @GetMapping(
+      path = "/count",
+      params = {"userId", "type"})
+  public ResponseEntity<Long> getUserReviewCount(
+      @RequestParam MediaType type, @RequestParam Long userId) {
+    return new ResponseEntity<>(
+        reviewService.countAllByUserIdAndMediaType(userId, type), HttpStatus.OK);
+  }
+
   @GetMapping(params = {"mediaId", "page", "size"})
   public ResponseEntity<Page<ReviewDto>> listReviews(
       @RequestParam Integer page, @RequestParam Integer size, @RequestParam Long mediaId) {
     Page<ReviewEntity> reviews =
         reviewService.findAllByMediaId(mediaId, PageRequest.of(page - 1, size));
+    return new ResponseEntity<>(reviews.map(reviewMapper::mapTo), HttpStatus.OK);
+  }
+
+  @GetMapping(params = {"page", "size", "userId", "type"})
+  public ResponseEntity<Page<ReviewDto>> listUserReviews(
+      @RequestParam MediaType type,
+      @RequestParam Long userId,
+      @RequestParam Integer page,
+      @RequestParam Integer size) {
+    Page<ReviewEntity> reviews =
+        reviewService.findAllByUserIdAndType(userId, type, PageRequest.of(page - 1, size));
     return new ResponseEntity<>(reviews.map(reviewMapper::mapTo), HttpStatus.OK);
   }
 }

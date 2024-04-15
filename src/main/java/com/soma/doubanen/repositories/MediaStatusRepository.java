@@ -3,7 +3,6 @@ package com.soma.doubanen.repositories;
 import com.soma.doubanen.domains.entities.MediaStatusEntity;
 import com.soma.doubanen.domains.enums.MediaStatus;
 import com.soma.doubanen.domains.enums.MediaType;
-import java.util.List;
 import java.util.Optional;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -14,8 +13,8 @@ import org.springframework.transaction.annotation.Transactional;
 
 @Repository
 public interface MediaStatusRepository extends JpaRepository<MediaStatusEntity, Long> {
-  List<MediaStatusEntity> findByTypeAndUserIdAndStatus(
-      MediaType type, Long userId, MediaStatus status);
+  Page<MediaStatusEntity> findByTypeAndUserIdAndStatus(
+      Pageable pageable, MediaType type, Long userId, MediaStatus status);
 
   Optional<MediaStatusEntity> findOneByUserIdAndMediaId(Long userId, Long mediaId);
 

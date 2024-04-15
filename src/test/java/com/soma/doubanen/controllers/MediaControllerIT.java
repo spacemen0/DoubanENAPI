@@ -7,9 +7,12 @@ import com.soma.doubanen.DataUtil;
 import com.soma.doubanen.domains.dto.MediaDto;
 import com.soma.doubanen.domains.entities.AuthorEntity;
 import com.soma.doubanen.domains.entities.MediaEntity;
+import com.soma.doubanen.domains.entities.MediaStatusEntity;
+import com.soma.doubanen.domains.enums.MediaStatus;
 import com.soma.doubanen.mappers.Mapper;
 import com.soma.doubanen.services.AuthService;
 import com.soma.doubanen.services.MediaService;
+import com.soma.doubanen.services.MediaStatusService;
 import java.time.LocalDate;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
@@ -37,6 +40,7 @@ public class MediaControllerIT {
   private final MediaService mediaService;
 
   private final AuthService authService;
+  private final MediaStatusService mediaStatusService;
 
   private final MockMvc mockMvc;
 
@@ -48,11 +52,13 @@ public class MediaControllerIT {
   public MediaControllerIT(
       MediaService mediaService,
       AuthService authService,
+      MediaStatusService mediaStatusService,
       MockMvc mockMvc,
       ObjectMapper objectMapper,
       Mapper<MediaEntity, MediaDto> musicMapper) {
     this.mediaService = mediaService;
     this.authService = authService;
+    this.mediaStatusService = mediaStatusService;
     this.mockMvc = mockMvc;
     this.objectMapper = objectMapper;
     this.musicMapper = musicMapper;
@@ -190,5 +196,55 @@ public class MediaControllerIT {
         .andExpect(MockMvcResultMatchers.status().isNoContent());
     Optional<MediaEntity> noMusicEntity = mediaService.findOne(savedMusicEntity.get().getId());
     assertThat(noMusicEntity).isEmpty();
+  }
+
+  @Test
+  public void TestThatGetUserCurrentOnSuccessfullyReturnsHttpOk() throws Exception {
+    AuthorEntity artist = DataUtil.CreateArtistPunkAndRock();
+    AuthorEntity director = DataUtil.CreateDirector();
+    AuthorEntity author = DataUtil.CreateAuthor();
+    artist.setId(null);
+    director.setId(null);
+    author.setId(null);
+    MediaEntity music = DataUtil.CreateMusicRockAlbum(artist);
+    MediaEntity movie = DataUtil.CreateMovie(director);
+    MediaEntity book = DataUtil.CreateBook(author);
+    mediaService.save(music, null);
+    mediaService.save(movie, null);
+    mediaService.save(book, null);
+    DataUtil.obtainStandardAccessToken(authService);
+    mediaStatusService.save(
+        MediaStatusEntity.builder()
+            .mediaId(1L)
+            .score(3f)
+            .type(com.soma.doubanen.domains.enums.MediaType.Music)
+            .userId(1L)
+            .status(MediaStatus.Rated)
+            .build(),
+        null);
+    mediaStatusService.save(
+        MediaStatusEntity.builder()
+            .mediaId(2L)
+            .score(3f)
+            .type(com.soma.doubanen.domains.enums.MediaType.Movie)
+            .userId(1L)
+            .status(MediaStatus.Rated)
+            .build(),
+        null);
+    mediaStatusService.save(
+        MediaStatusEntity.builder()
+            .mediaId(3L)
+            .score(3f)
+            .type(com.soma.doubanen.domains.enums.MediaType.Book)
+            .userId(1L)
+            .status(MediaStatus.Rated)
+            .build(),
+        null);
+    mockMvc
+        .perform(MockMvcRequestBuilders.get("/medias?userId=1"))
+        .andExpect(MockMvcResultMatchers.status().isOk())
+        .andExpect(MockMvcResultMatchers.jsonPath("$.[0].title").value("Nevermind"))
+        .andExpect(MockMvcResultMatchers.jsonPath("$.[1].title").value("Movie"))
+        .andExpect(MockMvcResultMatchers.jsonPath("$.[2].title").value("Book"));
   }
 }

@@ -131,9 +131,9 @@ public class MediaStatusServiceImpl implements MediaStatusService {
   }
 
   @Override
-  public List<MediaStatusEntity> findByTypeAndUserIdAndStatus(
-      MediaType type, Long userId, MediaStatus status) {
-    return mediaStatusRepository.findByTypeAndUserIdAndStatus(type, userId, status);
+  public Page<MediaStatusEntity> findByTypeAndUserIdAndStatus(
+      MediaType type, Long userId, MediaStatus status, Pageable pageable) {
+    return mediaStatusRepository.findByTypeAndUserIdAndStatus(pageable, type, userId, status);
   }
 
   public Optional<MediaStatusEntity> findByUserIdAndMediaId(Long userId, Long mediaId) {

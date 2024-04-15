@@ -1,6 +1,7 @@
 package com.soma.doubanen.domains.dto;
 
 import com.soma.doubanen.domains.entities.UserEntity;
+import com.soma.doubanen.domains.enums.MediaType;
 import java.time.LocalDate;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -19,6 +20,8 @@ public class ReviewDto {
   private LocalDate date;
 
   private Long mediaId;
+
+  private MediaType type;
 
   private String title;
 

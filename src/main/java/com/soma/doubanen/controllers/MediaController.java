@@ -4,17 +4,17 @@ import com.soma.doubanen.domains.dto.MediaDto;
 import com.soma.doubanen.domains.entities.AuthorEntity;
 import com.soma.doubanen.domains.entities.ImageEntity;
 import com.soma.doubanen.domains.entities.MediaEntity;
-import com.soma.doubanen.domains.enums.AuthorType;
-import com.soma.doubanen.domains.enums.ImageType;
-import com.soma.doubanen.domains.enums.MediaGenre;
-import com.soma.doubanen.domains.enums.MediaType;
+import com.soma.doubanen.domains.entities.MediaStatusEntity;
+import com.soma.doubanen.domains.enums.*;
 import com.soma.doubanen.mappers.Mapper;
 import com.soma.doubanen.services.AuthorService;
 import com.soma.doubanen.services.ImageService;
 import com.soma.doubanen.services.MediaService;
+import com.soma.doubanen.services.MediaStatusService;
 import java.io.IOException;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -33,16 +33,20 @@ public class MediaController {
 
   private final AuthorService authorService;
 
+  private final MediaStatusService mediaStatusService;
+
   private final Mapper<MediaEntity, MediaDto> mediaMapper;
 
   public MediaController(
       MediaService mediaService,
       ImageService imageService,
       AuthorService authorService,
+      MediaStatusService mediaStatusService,
       Mapper<MediaEntity, MediaDto> mediaMapper) {
     this.mediaService = mediaService;
     this.imageService = imageService;
     this.authorService = authorService;
+    this.mediaStatusService = mediaStatusService;
     this.mediaMapper = mediaMapper;
   }
 
@@ -54,9 +58,6 @@ public class MediaController {
       @RequestParam(value = "authorType", required = false) AuthorType type,
       @RequestParam(value = "authorGenres", required = false) List<MediaGenre> genres,
       @RequestParam(value = "authorId", required = false) Long authorId) {
-    //    List<MediaGenre> mediaGenres = genres.stream()
-    //            .map(MediaGenre::valueOf)
-    //            .toList();
     MediaEntity mediaEntity = mediaMapper.mapFrom(mediaDto);
     System.out.println(mediaDto);
     Optional<MediaEntity> result = mediaService.save(mediaEntity, null);
@@ -180,5 +181,74 @@ public class MediaController {
     Page<MediaEntity> musics =
         mediaService.findAll(PageRequest.of(page - 1, size), MediaType.valueOf(type));
     return new ResponseEntity<>(musics.map(mediaMapper::mapTo), HttpStatus.OK);
+  }
+
+  @GetMapping(
+      params = {
+        "userId",
+        "mediaType",
+        "mediaStatus",
+        "page",
+        "size",
+      })
+  public Page<MediaDto> getCorrespondingMediasByUserMediaStatuses(
+      @RequestParam Long userId,
+      @RequestParam MediaType mediaType,
+      @RequestParam MediaStatus mediaStatus,
+      @RequestParam Integer page,
+      @RequestParam Integer size) {
+    Page<MediaStatusEntity> mediaStatuses =
+        mediaStatusService.findByTypeAndUserIdAndStatus(
+            mediaType, userId, mediaStatus, PageRequest.of(page - 1, size));
+
+    return mediaStatuses.map(
+        (correspondingMediaStatus) -> {
+          Optional<MediaEntity> mediaEntity =
+              mediaService.findOne(correspondingMediaStatus.getMediaId());
+          return mediaEntity.map(mediaMapper::mapTo).orElse(null);
+        });
+  }
+
+  @GetMapping(params = "userId")
+  public List<MediaDto> getUserCurrentEngagingMedias(@RequestParam Long userId) {
+    List<MediaStatusEntity> mediaStatuses = mediaStatusService.getUserCurrentOn(userId);
+    List<MediaEntity> correspondingMediaEntities =
+        mediaStatuses.stream()
+            .map(
+                correspondingMediaStatus ->
+                    mediaService.findOne(correspondingMediaStatus.getMediaId()))
+            .filter(Optional::isPresent)
+            .map(Optional::get)
+            .toList();
+    return correspondingMediaEntities.stream().map(mediaMapper::mapTo).collect(Collectors.toList());
+  }
+
+  @GetMapping(params = {"userId", "page", "size", "mediaStatus"})
+  public ResponseEntity<Page<MediaDto>> getAllCorrespondingMediasByUserMediaStatus(
+      @RequestParam Long userId,
+      @RequestParam Integer page,
+      @RequestParam Integer size,
+      @RequestParam MediaStatus mediaStatus) {
+
+    return new ResponseEntity<>(
+        mediaStatusService
+            .findAllWithPagination(PageRequest.of(page - 1, size), userId, mediaStatus)
+            .map(mediaMapper::mapTo),
+        HttpStatus.OK);
+  }
+
+  @GetMapping(params = {"type", "userId", "page", "size", "mediaStatus"})
+  public ResponseEntity<Page<MediaDto>> getCorrespondingMediasByUserMediaStatusAndMediaType(
+      @RequestParam MediaType type,
+      @RequestParam Long userId,
+      @RequestParam Integer page,
+      @RequestParam Integer size,
+      @RequestParam MediaStatus mediaStatus) {
+
+    return new ResponseEntity<>(
+        mediaStatusService
+            .findByTypeWithPagination(PageRequest.of(page - 1, size), type, userId, mediaStatus)
+            .map(mediaMapper::mapTo),
+        HttpStatus.OK);
   }
 }
