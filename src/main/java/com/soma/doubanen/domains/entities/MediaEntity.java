@@ -8,25 +8,30 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import org.hibernate.search.mapper.pojo.mapping.definition.annotation.*;
 
+@Indexed
 @AllArgsConstructor
 @NoArgsConstructor
 @Builder
 @Data
 @Entity
-@Table(name = "medias")
+@Table(name = "media")
 public class MediaEntity {
 
   @Id
   @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "media_id_seq")
   private Long id;
 
+  @FullTextField()
   @Column(nullable = false)
   private String title;
 
+  @FullTextField()
   @Column(columnDefinition = "TEXT")
   private String description;
 
+  @FullTextField()
   @Column(columnDefinition = "TEXT")
   private String additionalInfo;
 
@@ -50,11 +55,14 @@ public class MediaEntity {
   private MediaGenre genre;
 
   @Enumerated(EnumType.STRING)
+  @FullTextField()
   @Column(nullable = false)
   private MediaType type;
 
   @Column(nullable = false)
   private String imageUrl;
+
+  @FullTextField private String author_name;
 
   @ManyToOne()
   @JoinColumn(name = "author_id")

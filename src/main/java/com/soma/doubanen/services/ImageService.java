@@ -7,6 +7,8 @@ import java.util.zip.DataFormatException;
 
 public interface ImageService {
 
+  void deleteById(Long id);
+
   byte[] compressImage(byte[] data) throws IOException;
 
   byte[] decompressImage(byte[] data) throws DataFormatException, IOException;

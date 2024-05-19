@@ -2,6 +2,7 @@ package com.soma.doubanen.controllers;
 
 import com.soma.doubanen.domains.dto.ReviewDto;
 import com.soma.doubanen.domains.entities.ReviewEntity;
+import com.soma.doubanen.domains.entities.UserEntity;
 import com.soma.doubanen.domains.enums.MediaType;
 import com.soma.doubanen.mappers.Mapper;
 import com.soma.doubanen.services.ReviewService;
@@ -153,5 +154,62 @@ public class ReviewController {
     Page<ReviewEntity> reviews =
         reviewService.findAllByUserIdAndType(userId, type, PageRequest.of(page - 1, size));
     return new ResponseEntity<>(reviews.map(reviewMapper::mapTo), HttpStatus.OK);
+  }
+
+  @PutMapping("/{reviewId}/like")
+  public ResponseEntity<Void> likeReview(
+      @PathVariable("reviewId") Long reviewId,
+      @RequestParam("userId") Long userId,
+      @RequestHeader(name = "Authorization") String auth) {
+    Optional<ReviewEntity> reviewOptional = reviewService.findOne(reviewId);
+    Optional<UserEntity> userOptional = userService.findOne(userId);
+    if (reviewOptional.isPresent() && userOptional.isPresent()) {
+      String token = auth.substring(7);
+      String username = tokenService.extractUsername(token);
+      if (!username.equals(userService.getUsernameById(userId)))
+        return new ResponseEntity<>(HttpStatus.UNAUTHORIZED);
+      ReviewEntity review = reviewOptional.get();
+      UserEntity user = userOptional.get();
+      reviewService.like(review, user);
+      return new ResponseEntity<>(HttpStatus.OK);
+    } else {
+      return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+    }
+  }
+
+  @PutMapping("/{reviewId}/unlike")
+  public ResponseEntity<Void> unlikeReview(
+      @PathVariable("reviewId") Long reviewId,
+      @RequestParam("userId") Long userId,
+      @RequestHeader(name = "Authorization") String auth) {
+    Optional<ReviewEntity> reviewOptional = reviewService.findOne(reviewId);
+    Optional<UserEntity> userOptional = userService.findOne(userId);
+    if (reviewOptional.isPresent() && userOptional.isPresent()) {
+      String token = auth.substring(7);
+      String username = tokenService.extractUsername(token);
+      if (!username.equals(userService.getUsernameById(userId)))
+        return new ResponseEntity<>(HttpStatus.UNAUTHORIZED);
+      ReviewEntity review = reviewOptional.get();
+      UserEntity user = userOptional.get();
+      reviewService.unlike(review, user);
+      return new ResponseEntity<>(HttpStatus.OK);
+    } else {
+      return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+    }
+  }
+
+  @GetMapping("/{reviewId}/is-liked")
+  public ResponseEntity<Boolean> isReviewLiked(
+      @PathVariable("reviewId") Long reviewId, @RequestParam("userId") Long userId) {
+    Optional<ReviewEntity> reviewOptional = reviewService.findOne(reviewId);
+    Optional<UserEntity> userOptional = userService.findOne(userId);
+    if (reviewOptional.isPresent() && userOptional.isPresent()) {
+      ReviewEntity review = reviewOptional.get();
+      UserEntity user = userOptional.get();
+      boolean isLiked = reviewService.isLiked(review, user);
+      return new ResponseEntity<>(isLiked, HttpStatus.OK);
+    } else {
+      return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+    }
   }
 }

@@ -1,16 +1,11 @@
 package com.soma.doubanen.controllers;
 
 import com.soma.doubanen.domains.dto.MediaDto;
-import com.soma.doubanen.domains.entities.AuthorEntity;
-import com.soma.doubanen.domains.entities.ImageEntity;
-import com.soma.doubanen.domains.entities.MediaEntity;
-import com.soma.doubanen.domains.entities.MediaStatusEntity;
+import com.soma.doubanen.domains.dto.SearchRequestDto;
+import com.soma.doubanen.domains.entities.*;
 import com.soma.doubanen.domains.enums.*;
 import com.soma.doubanen.mappers.Mapper;
-import com.soma.doubanen.services.AuthorService;
-import com.soma.doubanen.services.ImageService;
-import com.soma.doubanen.services.MediaService;
-import com.soma.doubanen.services.MediaStatusService;
+import com.soma.doubanen.services.*;
 import java.io.IOException;
 import java.util.List;
 import java.util.Optional;
@@ -24,7 +19,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 @RestController
-@RequestMapping("/medias")
+@RequestMapping("/media")
 public class MediaController {
 
   private final MediaService mediaService;
@@ -33,7 +28,13 @@ public class MediaController {
 
   private final AuthorService authorService;
 
+  private final TokenService tokenService;
+
+  private final UserService userService;
+
   private final MediaStatusService mediaStatusService;
+
+  private final MediaRequestService mediaRequestService;
 
   private final Mapper<MediaEntity, MediaDto> mediaMapper;
 
@@ -41,65 +42,81 @@ public class MediaController {
       MediaService mediaService,
       ImageService imageService,
       AuthorService authorService,
+      TokenService tokenService,
+      UserService userService,
       MediaStatusService mediaStatusService,
+      MediaRequestService mediaRequestService,
       Mapper<MediaEntity, MediaDto> mediaMapper) {
     this.mediaService = mediaService;
     this.imageService = imageService;
     this.authorService = authorService;
+    this.tokenService = tokenService;
+    this.userService = userService;
     this.mediaStatusService = mediaStatusService;
+    this.mediaRequestService = mediaRequestService;
     this.mediaMapper = mediaMapper;
   }
 
   @PostMapping(consumes = {"multipart/form-data"})
-  public ResponseEntity<MediaDto> createMedia(
+  public ResponseEntity<?> createMedia(
       @ModelAttribute MediaDto mediaDto,
-      @RequestParam(value = "image", required = false) MultipartFile image,
+      @RequestParam(value = "image") MultipartFile image,
       @RequestParam(value = "authorName", required = false) String authorName,
-      @RequestParam(value = "authorType", required = false) AuthorType type,
+      @RequestParam(value = "authorType", required = false) AuthorType authorType,
       @RequestParam(value = "authorGenres", required = false) List<MediaGenre> genres,
-      @RequestParam(value = "authorId", required = false) Long authorId) {
+      @RequestParam(value = "authorId", required = false) Long authorId,
+      @RequestHeader(name = "Authorization") String auth) {
+    String token = auth.substring(7);
+    String username = tokenService.extractUsername(token);
+    Optional<UserEntity> userEntity = userService.findByUsername(username);
+    if (userEntity.isEmpty()) return new ResponseEntity<>(HttpStatus.UNAUTHORIZED);
+    UserEntity user = userEntity.get();
     MediaEntity mediaEntity = mediaMapper.mapFrom(mediaDto);
-    System.out.println(mediaDto);
-    Optional<MediaEntity> result = mediaService.save(mediaEntity, null);
-    if (result.isPresent()) {
-      MediaEntity media = result.get();
-      if (image != null) {
-
-        byte[] data;
-        try {
-          data = imageService.compressImage(image.getBytes());
-        } catch (IOException e) {
-          return new ResponseEntity<>(null, HttpStatus.INTERNAL_SERVER_ERROR);
-        }
-        ImageEntity imageEntity =
-            ImageEntity.builder()
-                .imageData(data)
-                .objectId(media.getId())
-                .type(ImageType.MediaArt)
-                .build();
-        ImageEntity savedImage = imageService.save(imageEntity);
-        media.setImageUrl("/images/" + savedImage.getId());
-        AuthorEntity author;
-        if (authorId == null) {
-          author = AuthorEntity.builder().type(type).name(authorName).build();
-          if (genres != null) author.setGenres(genres);
-        } else {
-          author = authorService.findOne(authorId).orElseThrow();
-        }
-        author.setMediaEntities(List.of(media));
-        media.setAuthorEntity(author);
-
-        Optional<MediaEntity> optionalMedia = mediaService.save(media, media.getId());
-        return optionalMedia
-            .map(
-                mediaEntity1 -> {
-                  MediaDto mediaDto1 = mediaMapper.mapTo(mediaEntity1);
-                  return new ResponseEntity<>(mediaDto1, HttpStatus.CREATED);
-                })
-            .orElse(new ResponseEntity<>(HttpStatus.BAD_REQUEST));
-      }
+    mediaEntity.setAuthorEntity(null);
+    byte[] data;
+    try {
+      data = imageService.compressImage(image.getBytes());
+    } catch (IOException e) {
+      return new ResponseEntity<>(null, HttpStatus.INTERNAL_SERVER_ERROR);
     }
-    return (new ResponseEntity<>(HttpStatus.BAD_REQUEST));
+    ImageEntity imageEntity =
+        ImageEntity.builder()
+            .imageData(data)
+            .objectId(-1L) // placeholder
+            .type(ImageType.MediaArt)
+            .build();
+    ImageEntity savedImage = imageService.save(imageEntity);
+    mediaEntity.setImageUrl("/images/" + savedImage.getId());
+    AuthorEntity author;
+    if (authorId == null) {
+      if (authorName != null && authorType != null) {
+        author = AuthorEntity.builder().type(authorType).name(authorName).build();
+        if (genres != null) author.setGenres(genres);
+      } else {
+        return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
+      }
+    } else {
+      Optional<AuthorEntity> optionalAuthor = authorService.findOne(authorId);
+      if (optionalAuthor.isEmpty()) return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
+      author = optionalAuthor.get();
+    }
+    mediaEntity.setAuthorEntity(author);
+    if (!mediaService.check(mediaEntity, null)) return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
+    if (user.getRole() == UserRole.Admin) {
+      Optional<MediaEntity> optionalMedia =
+          mediaService.save(mediaEntity, null); // author will also be persisted
+      return optionalMedia
+          .map(
+              addedMedia -> {
+                MediaDto addedMediaDto = mediaMapper.mapTo(addedMedia);
+                return new ResponseEntity<>(addedMediaDto, HttpStatus.CREATED);
+              })
+          .orElse(new ResponseEntity<>(HttpStatus.BAD_REQUEST));
+    } else {
+      mediaRequestService.save(
+          mediaRequestService.toMediaRequest(mediaEntity, RequestStatus.Pending, user.getId()));
+      return new ResponseEntity<>("Request Sent", HttpStatus.OK);
+    }
   }
 
   @GetMapping(path = "{id}")
@@ -250,5 +267,19 @@ public class MediaController {
             .findByTypeWithPagination(PageRequest.of(page - 1, size), type, userId, mediaStatus)
             .map(mediaMapper::mapTo),
         HttpStatus.OK);
+  }
+
+  @GetMapping(path = "/search")
+  public List<MediaDto> searchMedias(SearchRequestDto searchRequestDto) {
+    return mediaService
+        .searchMedias(
+            searchRequestDto.getText(),
+            searchRequestDto.getFields(),
+            searchRequestDto.getPage(),
+            searchRequestDto.getLimit(),
+            searchRequestDto.getType())
+        .stream()
+        .map(mediaMapper::mapTo)
+        .collect(Collectors.toList());
   }
 }

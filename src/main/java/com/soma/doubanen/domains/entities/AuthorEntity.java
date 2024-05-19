@@ -5,8 +5,11 @@ import com.soma.doubanen.domains.enums.MediaGenre;
 import jakarta.persistence.*;
 import java.util.List;
 import lombok.*;
+import org.hibernate.search.mapper.pojo.mapping.definition.annotation.FullTextField;
+import org.springframework.stereotype.Indexed;
 
 @AllArgsConstructor
+@Indexed
 @NoArgsConstructor
 @Builder
 @Data
@@ -18,7 +21,7 @@ public class AuthorEntity {
   @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "author_id_seq")
   private Long id;
 
-  private String name;
+  @FullTextField() private String name;
 
   @Enumerated(EnumType.STRING)
   @Column(nullable = false)

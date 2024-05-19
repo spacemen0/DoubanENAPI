@@ -4,31 +4,38 @@ import com.soma.doubanen.domains.entities.ReviewEntity;
 import com.soma.doubanen.domains.entities.UserEntity;
 import com.soma.doubanen.domains.enums.MediaType;
 import com.soma.doubanen.repositories.ReviewRepository;
-import com.soma.doubanen.repositories.UserRepository;
 import com.soma.doubanen.services.ReviewService;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.PersistenceContext;
 import java.time.LocalDate;
+import java.util.Iterator;
+import java.util.List;
 import java.util.Optional;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class ReviewServiceImpl implements ReviewService {
   private final ReviewRepository reviewRepository;
-  private final UserRepository userRepository;
 
-  public ReviewServiceImpl(ReviewRepository reviewRepository, UserRepository userRepository) {
+  @PersistenceContext private EntityManager entityManager;
+
+  public ReviewServiceImpl(ReviewRepository reviewRepository) {
     this.reviewRepository = reviewRepository;
-    this.userRepository = userRepository;
   }
 
   @Override
+  @Transactional
   public ReviewEntity save(ReviewEntity reviewEntity, Long id) throws Exception {
     reviewEntity.setId(id);
-    Optional<UserEntity> userEntity = userRepository.findById(reviewEntity.getUser().getId());
-    if (userEntity.isEmpty()) throw new Exception("Runtime Error");
+    UserEntity userEntity = entityManager.find(UserEntity.class, reviewEntity.getUser().getId());
+    if (userEntity == null) throw new Exception("Runtime Error");
     reviewEntity.setDate(LocalDate.now());
-    reviewEntity.setUser(userEntity.get());
+    reviewEntity.setLikes(0L);
+    userEntity = entityManager.merge(userEntity);
+    reviewEntity.setUser(userEntity);
     return reviewRepository.save(reviewEntity);
   }
 
@@ -64,6 +71,55 @@ public class ReviewServiceImpl implements ReviewService {
   @Override
   public boolean notExists(Long id) {
     return !reviewRepository.existsById(id);
+  }
+
+  @Override
+  public void like(ReviewEntity reviewEntity, UserEntity user) {
+    List<UserEntity> users = reviewEntity.getLikedUsers();
+    long userIdToAdd = user.getId();
+
+    for (UserEntity likedUser : users) {
+      if (likedUser.getId() == userIdToAdd) {
+        return;
+      }
+    }
+    users.add(user);
+    reviewEntity.setLikes(reviewEntity.getLikes() + 1);
+    reviewEntity.setLikedUsers(users);
+    reviewRepository.save(reviewEntity);
+  }
+
+  @Override
+  public void unlike(ReviewEntity reviewEntity, UserEntity user) {
+    List<UserEntity> users = reviewEntity.getLikedUsers();
+    long userIdToRemove = user.getId();
+
+    Iterator<UserEntity> iterator = users.iterator();
+    while (iterator.hasNext()) {
+      UserEntity likedUser = iterator.next();
+      if (likedUser.getId() == userIdToRemove) {
+        if (reviewEntity.getLikes() > 0) {
+          reviewEntity.setLikes(reviewEntity.getLikes() - 1);
+        }
+        iterator.remove();
+        break;
+      }
+    }
+    reviewEntity.setLikedUsers(users);
+    reviewRepository.save(reviewEntity);
+  }
+
+  @Override
+  public boolean isLiked(ReviewEntity review, UserEntity user) {
+    List<UserEntity> users = review.getLikedUsers();
+    long userIdToCompare = user.getId();
+
+    for (UserEntity likedUser : users) {
+      if (likedUser.getId() == userIdToCompare) {
+        return true;
+      }
+    }
+    return false;
   }
 
   @Override

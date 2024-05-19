@@ -27,10 +27,12 @@ public class MediaListEntity {
 
   private LocalDate date;
 
+  private String imageUrl;
+
   @ManyToMany(fetch = FetchType.EAGER)
   private List<MediaEntity> mediaEntities;
 
-  @ManyToOne(cascade = {CascadeType.PERSIST, CascadeType.MERGE, CascadeType.REFRESH})
+  @ManyToOne(cascade = {CascadeType.MERGE, CascadeType.REFRESH})
   @JoinColumn(name = "user_id")
   private UserEntity userEntity;
 }

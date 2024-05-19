@@ -7,6 +7,8 @@ import com.soma.doubanen.repositories.MediaRepository;
 import com.soma.doubanen.services.AuthorService;
 import java.util.List;
 import java.util.Optional;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -35,6 +37,16 @@ public class AuthorServiceImpl implements AuthorService {
   @Override
   public List<AuthorEntity> findAll() {
     return authorRepository.findAll();
+  }
+
+  @Override
+  public Page<MediaEntity> findAllMediaWithPagination(Long id, Pageable pageable) {
+    return mediaRepository.findByAuthorEntityId(id, pageable);
+  }
+
+  @Override
+  public Long countMedia(Long id) {
+    return mediaRepository.countByAuthorEntityId(id);
   }
 
   @Override

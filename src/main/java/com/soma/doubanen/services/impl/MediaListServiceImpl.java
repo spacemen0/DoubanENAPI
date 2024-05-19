@@ -3,6 +3,8 @@ package com.soma.doubanen.services.impl;
 import com.soma.doubanen.domains.entities.MediaEntity;
 import com.soma.doubanen.domains.entities.MediaListEntity;
 import com.soma.doubanen.domains.entities.UserEntity;
+import com.soma.doubanen.domains.enums.ImageType;
+import com.soma.doubanen.repositories.ImageRepository;
 import com.soma.doubanen.repositories.MediaListRepository;
 import com.soma.doubanen.repositories.MediaRepository;
 import com.soma.doubanen.repositories.UserRepository;
@@ -17,27 +19,29 @@ public class MediaListServiceImpl implements MediaListService {
 
   private final MediaListRepository mediaListRepository;
   private final MediaRepository mediaRepository;
-
+  private final ImageRepository imageRepository;
   private final UserRepository userRepository;
 
   public MediaListServiceImpl(
       MediaListRepository mediaListRepository,
       MediaRepository mediaRepository,
+      ImageRepository imageRepository,
       UserRepository userRepository) {
     this.mediaListRepository = mediaListRepository;
     this.mediaRepository = mediaRepository;
+    this.imageRepository = imageRepository;
     this.userRepository = userRepository;
   }
 
   @Override
-  public Optional<MediaListEntity> save(MediaListEntity mediaListEntity, Long id) throws Exception {
+  public MediaListEntity save(MediaListEntity mediaListEntity, Long id) throws Exception {
     Optional<UserEntity> userEntity =
         userRepository.findById(mediaListEntity.getUserEntity().getId());
     if (userEntity.isEmpty()) throw new Exception("Runtime Error");
     mediaListEntity.setId(id);
     mediaListEntity.setDate(LocalDate.now());
     mediaListEntity.setUserEntity(userEntity.get());
-    return Optional.of(mediaListRepository.save(mediaListEntity));
+    return mediaListRepository.save(mediaListEntity);
   }
 
   @Override
@@ -64,6 +68,7 @@ public class MediaListServiceImpl implements MediaListService {
 
   @Override
   public void delete(Long id) {
+    imageRepository.deleteAllByObjectIdAndType(id, ImageType.MediaListCover);
     mediaListRepository.deleteById(id);
   }
 

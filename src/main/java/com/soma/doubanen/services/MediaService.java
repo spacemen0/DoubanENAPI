@@ -11,11 +11,16 @@ public interface MediaService {
 
   Optional<MediaEntity> save(MediaEntity mediaEntity, Long id);
 
+  boolean check(MediaEntity mediaEntity, Long id);
+
   Optional<MediaEntity> findOne(Long id);
 
   List<MediaEntity> findAll();
 
   Page<MediaEntity> findAll(Pageable pageable);
+
+  List<MediaEntity> searchMedias(
+      String text, List<String> fields, int page, int limit, MediaType type);
 
   Page<MediaEntity> findAll(Pageable pageable, MediaType mediaType);
 

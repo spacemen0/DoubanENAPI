@@ -6,6 +6,7 @@ import com.soma.doubanen.domains.entities.UserEntity;
 import com.soma.doubanen.domains.enums.UserRole;
 import com.soma.doubanen.mappers.Mapper;
 import com.soma.doubanen.services.AuthService;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -30,6 +31,12 @@ public class AuthController {
 
   @PostMapping("/login")
   public ResponseEntity<AuthResponse> login(@RequestBody UserDto request) {
-    return ResponseEntity.ok(authService.authenticate(userMapper.mapFrom(request)));
+    AuthResponse authResponse;
+    try {
+      authResponse = authService.authenticate(userMapper.mapFrom(request));
+      return ResponseEntity.ok(authResponse);
+    } catch (Exception e) {
+      return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+    }
   }
 }

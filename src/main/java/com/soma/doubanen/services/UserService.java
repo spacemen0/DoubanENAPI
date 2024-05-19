@@ -12,6 +12,8 @@ public interface UserService {
 
   String getUsernameById(Long id);
 
+  Optional<UserEntity> findByUsername(String username);
+
   List<UserEntity> findAll();
 
   boolean notExists(Long id);

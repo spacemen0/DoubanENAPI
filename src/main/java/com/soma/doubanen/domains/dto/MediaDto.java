@@ -38,10 +38,12 @@ public class MediaDto {
 
   private Long doings;
 
-  @JsonIdentityInfo(generator = ObjectIdGenerators.PropertyGenerator.class, property = "name")
+  @JsonIdentityInfo(generator = ObjectIdGenerators.PropertyGenerator.class, property = "id")
   @JsonProperty("author")
   @JsonIdentityReference(alwaysAsId = true)
   private AuthorDto authorDto;
+
+  private String author_name;
 
   private MediaGenre genre;
 

@@ -5,7 +5,7 @@ import java.util.List;
 import java.util.Optional;
 
 public interface MediaListService {
-  Optional<MediaListEntity> save(MediaListEntity mediaListEntity, Long id) throws Exception;
+  MediaListEntity save(MediaListEntity mediaListEntity, Long id) throws Exception;
 
   Optional<MediaListEntity> findOne(Long id);
 

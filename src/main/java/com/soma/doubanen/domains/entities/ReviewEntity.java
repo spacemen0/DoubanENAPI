@@ -3,6 +3,7 @@ package com.soma.doubanen.domains.entities;
 import com.soma.doubanen.domains.enums.MediaType;
 import jakarta.persistence.*;
 import java.time.LocalDate;
+import java.util.List;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -28,6 +29,15 @@ public class ReviewEntity {
 
   @Column(nullable = false)
   private Long mediaId;
+
+  private Long likes;
+
+  @ManyToMany(fetch = FetchType.EAGER)
+  @JoinTable(
+      name = "review_liked_users",
+      joinColumns = @JoinColumn(name = "review_id"),
+      inverseJoinColumns = @JoinColumn(name = "user_id"))
+  private List<UserEntity> likedUsers;
 
   @Enumerated(EnumType.STRING)
   private MediaType type;

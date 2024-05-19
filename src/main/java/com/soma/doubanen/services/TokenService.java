@@ -32,6 +32,7 @@ public interface TokenService {
 
   String generateToken(UserEntity user);
 
+  @SuppressWarnings("SpellCheckingInspection")
   default SecretKey getSignInKey() {
     String SECRET_KEY = "4bb6d1dfbafb64a681139d1586b6f1160d18159afd57c8c79136d749079fm4do";
     byte[] keyBytes = Decoders.BASE64URL.decode(SECRET_KEY);

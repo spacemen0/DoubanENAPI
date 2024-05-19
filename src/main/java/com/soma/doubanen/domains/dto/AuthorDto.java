@@ -1,5 +1,6 @@
 package com.soma.doubanen.domains.dto;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.soma.doubanen.domains.enums.AuthorType;
 import com.soma.doubanen.domains.enums.MediaGenre;
 import java.util.List;
@@ -21,5 +22,5 @@ public class AuthorDto {
 
   private AuthorType type;
 
-  private List<MediaDto> mediaDtos;
+  @JsonIgnore private List<MediaDto> mediaDtos;
 }

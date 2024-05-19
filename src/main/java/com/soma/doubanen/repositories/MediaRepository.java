@@ -5,15 +5,18 @@ import com.soma.doubanen.domains.enums.MediaType;
 import java.util.List;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
-import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
 @Repository
-public interface MediaRepository extends JpaRepository<MediaEntity, Long> {
+public interface MediaRepository extends SearchRepository<MediaEntity, Long> {
 
   Page<MediaEntity> findByType(MediaType mediaType, Pageable pageable);
 
   List<MediaEntity> findByAuthorEntityId(Long id);
 
+  Page<MediaEntity> findByAuthorEntityId(Long id, Pageable pageable);
+
   long countByType(MediaType mediaType);
+
+  long countByAuthorEntityId(Long authorEntity_id);
 }

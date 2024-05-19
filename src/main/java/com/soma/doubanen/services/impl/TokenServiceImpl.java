@@ -20,7 +20,7 @@ public class TokenServiceImpl implements TokenService {
   }
 
   @Override
-  public String extractUsername(String token) {
+  public String extractUsername(String token) throws io.jsonwebtoken.ExpiredJwtException {
     return extractClaim(token, Claims::getSubject);
   }
 

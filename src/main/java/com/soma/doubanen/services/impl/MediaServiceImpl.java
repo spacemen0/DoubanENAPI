@@ -6,6 +6,7 @@ import com.soma.doubanen.domains.enums.MediaType;
 import com.soma.doubanen.repositories.AuthorRepository;
 import com.soma.doubanen.repositories.MediaRepository;
 import com.soma.doubanen.services.MediaService;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 import org.springframework.data.domain.Page;
@@ -14,6 +15,9 @@ import org.springframework.stereotype.Service;
 
 @Service
 public class MediaServiceImpl implements MediaService {
+
+  private static final List<String> SEARCHABLE_FIELDS =
+      Arrays.asList("title", "author_name", "additionalInfo", "description");
 
   private final MediaRepository mediaRepository;
 
@@ -32,19 +36,46 @@ public class MediaServiceImpl implements MediaService {
     mediaEntity.setId(id);
     if (mediaEntity.getAuthorEntity() != null) {
       if (mediaEntity.getAuthorEntity().getId() == null) {
-        AuthorEntity savedArtist = authorRepository.save(mediaEntity.getAuthorEntity());
+        AuthorEntity author = mediaEntity.getAuthorEntity();
+        author.setMediaEntities(List.of(mediaEntity));
+        AuthorEntity savedArtist = authorRepository.save(author);
         mediaEntity.setAuthorEntity(savedArtist);
+        mediaEntity.setAuthor_name(savedArtist.getName());
       } else {
         if (!authorRepository.existsById(mediaEntity.getAuthorEntity().getId())) {
           return Optional.empty();
         } else {
           AuthorEntity existedArtist =
               authorRepository.findById(mediaEntity.getAuthorEntity().getId()).orElseThrow();
+          List<MediaEntity> mediaEntities = existedArtist.getMediaEntities();
+          mediaEntities.add(mediaEntity);
+          authorRepository.save(existedArtist);
           mediaEntity.setAuthorEntity(existedArtist);
+          mediaEntity.setAuthor_name(existedArtist.getName());
         }
       }
     }
     return Optional.of(mediaRepository.save(mediaEntity));
+  }
+
+  @Override
+  public boolean check(MediaEntity mediaEntity, Long id) {
+    mediaEntity.setId(id);
+    if (mediaEntity.getAuthorEntity() != null) {
+      if (mediaEntity.getAuthorEntity().getId() == null) {
+        return true;
+      } else {
+        if (!authorRepository.existsById(mediaEntity.getAuthorEntity().getId())) {
+          return false;
+        } else {
+          AuthorEntity existedArtist =
+              authorRepository.findById(mediaEntity.getAuthorEntity().getId()).orElseThrow();
+          mediaEntity.setAuthorEntity(existedArtist);
+          mediaEntity.setAuthor_name(existedArtist.getName());
+        }
+      }
+    }
+    return true;
   }
 
   @Override
@@ -91,8 +122,10 @@ public class MediaServiceImpl implements MediaService {
         .findById(id)
         .map(
             existingMedia -> {
-              if (mediaEntity.getAuthorEntity() != null)
+              if (mediaEntity.getAuthorEntity() != null) {
                 existingMedia.setAuthorEntity(mediaEntity.getAuthorEntity());
+                existingMedia.setAuthor_name(mediaEntity.getAuthorEntity().getName());
+              }
               if (mediaEntity.getTitle() != null) existingMedia.setTitle(mediaEntity.getTitle());
               if (mediaEntity.getDescription() != null)
                 existingMedia.setDescription(mediaEntity.getDescription());
@@ -112,5 +145,21 @@ public class MediaServiceImpl implements MediaService {
               return mediaRepository.save(existingMedia);
             })
         .orElseThrow(() -> new RuntimeException("Media does not exist"));
+  }
+
+  public List<MediaEntity> searchMedias(
+      String text, List<String> fields, int page, int limit, MediaType type) {
+
+    List<String> fieldsToSearchBy = fields.isEmpty() ? SEARCHABLE_FIELDS : fields;
+
+    boolean containsInvalidField =
+        fieldsToSearchBy.stream().anyMatch(f -> !SEARCHABLE_FIELDS.contains(f));
+
+    if (containsInvalidField) {
+      throw new IllegalArgumentException();
+    }
+
+    return mediaRepository.searchBy(
+        text, page, limit, type.toString(), fieldsToSearchBy.toArray(new String[0]));
   }
 }

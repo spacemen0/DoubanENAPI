@@ -1,6 +1,7 @@
 package com.soma.doubanen.services;
 
 import com.soma.doubanen.domains.entities.ReviewEntity;
+import com.soma.doubanen.domains.entities.UserEntity;
 import com.soma.doubanen.domains.enums.MediaType;
 import java.util.Optional;
 import org.springframework.data.domain.Page;
@@ -22,6 +23,12 @@ public interface ReviewService {
   Long countAllByUserIdAndMediaType(Long userId, MediaType type);
 
   boolean notExists(Long id);
+
+  void like(ReviewEntity reviewEntity, UserEntity userId);
+
+  void unlike(ReviewEntity reviewEntity, UserEntity userId);
+
+  boolean isLiked(ReviewEntity review, UserEntity user);
 
   void delete(Long id);
 

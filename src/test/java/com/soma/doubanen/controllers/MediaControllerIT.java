@@ -86,15 +86,17 @@ public class MediaControllerIT {
   @Test
   public void CreateMediaSuccessfullyReturnsHTTPCreated() throws Exception {
     AuthorEntity authorEntity = DataUtil.CreateArtistPunkAndRock();
+    authorEntity.setId(null);
     MediaEntity mediaEntity = DataUtil.CreateMusicRockAlbum(authorEntity);
     mediaEntity.setId(null);
     mediaEntity.setReleaseDate(LocalDate.of(2012, 12, 2));
     MultiValueMap<String, String> formData = getMultiValueMap(mediaEntity);
+    System.out.println(formData);
     MockMultipartFile mockFile =
         new MockMultipartFile("image", "filename.txt", "text/plain", "some image data".getBytes());
     mockMvc
         .perform(
-            MockMvcRequestBuilders.multipart("/medias")
+            MockMvcRequestBuilders.multipart("/media")
                 .file(mockFile)
                 .header(
                     HttpHeaders.AUTHORIZATION,
@@ -116,7 +118,7 @@ public class MediaControllerIT {
     Optional<MediaEntity> savedMusicEntity = mediaService.save(mediaEntity, null);
     assertThat(savedMusicEntity).isPresent();
     mockMvc
-        .perform(MockMvcRequestBuilders.get("/medias/" + savedMusicEntity.get().getId()))
+        .perform(MockMvcRequestBuilders.get("/media/" + savedMusicEntity.get().getId()))
         .andExpect(MockMvcResultMatchers.jsonPath("$.title").value("Nevermind"))
         .andExpect(MockMvcResultMatchers.jsonPath("$.genre").value("Rock"))
         .andExpect(MockMvcResultMatchers.status().isOk());
@@ -139,7 +141,7 @@ public class MediaControllerIT {
     String musicJson = objectMapper.writeValueAsString(musicMapper.mapTo(mediaEntity));
     mockMvc
         .perform(
-            MockMvcRequestBuilders.put("/medias/" + savedMusicEntity.get().getId())
+            MockMvcRequestBuilders.put("/media/" + savedMusicEntity.get().getId())
                 .contentType(MediaType.APPLICATION_JSON)
                 .header(
                     HttpHeaders.AUTHORIZATION,
@@ -167,7 +169,7 @@ public class MediaControllerIT {
     String musicJson = objectMapper.writeValueAsString(musicMapper.mapTo(mediaEntity));
     mockMvc
         .perform(
-            MockMvcRequestBuilders.patch("/medias/" + savedMusicEntity.get().getId())
+            MockMvcRequestBuilders.patch("/media/" + savedMusicEntity.get().getId())
                 .contentType(MediaType.APPLICATION_JSON)
                 .header(
                     HttpHeaders.AUTHORIZATION,
@@ -189,7 +191,7 @@ public class MediaControllerIT {
     assertThat(savedMusicEntity).isPresent();
     mockMvc
         .perform(
-            MockMvcRequestBuilders.delete("/medias/" + savedMusicEntity.get().getId())
+            MockMvcRequestBuilders.delete("/media/" + savedMusicEntity.get().getId())
                 .header(
                     HttpHeaders.AUTHORIZATION,
                     "Bearer " + DataUtil.obtainAdminAccessToken(authService)))
@@ -241,7 +243,7 @@ public class MediaControllerIT {
             .build(),
         null);
     mockMvc
-        .perform(MockMvcRequestBuilders.get("/medias?userId=1"))
+        .perform(MockMvcRequestBuilders.get("/media?userId=1"))
         .andExpect(MockMvcResultMatchers.status().isOk())
         .andExpect(MockMvcResultMatchers.jsonPath("$.[0].title").value("Nevermind"))
         .andExpect(MockMvcResultMatchers.jsonPath("$.[1].title").value("Movie"))

@@ -60,6 +60,7 @@ public class UserControllerIT {
     UserEntity userEntity = DataUtil.CreateUserA();
     UserDto userDto = userMapper.mapTo(userEntity);
     userDto.setPassword("123456789");
+    userDto.setEmail("dummy");
     String userJson = objectMapper.writeValueAsString(userDto);
     mockMvc
         .perform(
@@ -102,6 +103,7 @@ public class UserControllerIT {
     savedUser.setUsername("UpdatedName");
     UserDto userDto = userMapper.mapTo(savedUser);
     userDto.setPassword("12345678");
+    userDto.setEmail("dummy");
     String userJson = objectMapper.writeValueAsString(userDto);
     mockMvc
         .perform(

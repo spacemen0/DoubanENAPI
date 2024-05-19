@@ -18,6 +18,7 @@ public class UserMapperImpl implements Mapper<UserEntity, UserDto> {
   @Override
   public UserDto mapTo(UserEntity userEntity) {
     userEntity.setPassword(null);
+    userEntity.setEmail(null);
     return modelMapper.map(userEntity, UserDto.class);
   }
 

@@ -2,8 +2,9 @@ package com.soma.doubanen.config;
 
 import static org.springframework.security.config.Customizer.withDefaults;
 
-import com.soma.doubanen.filters.JwtAuthenticationFilter;
 import com.soma.doubanen.services.impl.UserDetailsServiceImpl;
+import com.soma.doubanen.utils.filters.JwtAuthenticationFilter;
+import com.soma.doubanen.utils.handlers.CustomLogoutHandler;
 import jakarta.servlet.http.HttpServletResponse;
 import java.util.List;
 import org.springframework.context.annotation.Bean;
@@ -54,8 +55,16 @@ public class SecurityConfig {
                     .requestMatchers("/auth/login", "/auth/register")
                     .permitAll()
                     .requestMatchers(
-                        "/media-lists/**", "/media-statuses/**", "/reviews/**", "/users/**")
+                        "/media-lists/**",
+                        "/media-statuses/**",
+                        "/reviews/**",
+                        "/users/**",
+                        "/comments/**")
                     .hasAnyAuthority("Standard", "Admin")
+                    .requestMatchers(HttpMethod.POST, "/media")
+                    .hasAnyAuthority("Standard", "Admin", "Contributor")
+                    .requestMatchers(HttpMethod.POST, "/authors")
+                    .hasAnyAuthority("Standard", "Admin", "Contributor")
                     .requestMatchers("/**")
                     .hasAuthority("Admin")
                     .anyRequest()
@@ -75,10 +84,8 @@ public class SecurityConfig {
                               .write("Access denied: " + accessDeniedException.getMessage());
                         })
                     .authenticationEntryPoint(
-                        (request, response, authException) -> {
-                          response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
-                          response.getWriter().write("Unauthorized: " + authException.getMessage());
-                        }))
+                        (request, response, e) ->
+                            response.getWriter().write("Unauthorized: " + e.getMessage())))
         .logout(
             l ->
                 l.logoutUrl("/auth/logout")
@@ -105,7 +112,10 @@ public class SecurityConfig {
     final CorsConfiguration configuration = new CorsConfiguration();
     configuration.setAllowedOrigins(
         List.of(
-            "http://192.168.124.9:5173/", "https://nice-water-005626e10.4.azurestaticapps.net/"));
+            "http://192.168.124.9:5173/",
+            "https://nice-water-005626e10.4.azurestaticapps.net/",
+            "https://douban-en.vercel.app/",
+            "http://localhost/"));
     configuration.setAllowedMethods(List.of("HEAD", "GET", "POST", "PUT", "DELETE", "PATCH"));
     configuration.setAllowCredentials(true);
     configuration.setAllowedHeaders(List.of("Authorization", "Cache-Control", "Content-Type"));

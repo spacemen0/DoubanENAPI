@@ -23,6 +23,11 @@ public class ImageServiceImpl implements ImageService {
     this.imageRepository = imageRepository;
   }
 
+  @Override
+  public void deleteById(Long id) {
+    imageRepository.deleteById(id);
+  }
+
   public byte[] compressImage(byte[] data) throws IOException {
     Deflater deflater = new Deflater();
     deflater.setLevel(Deflater.BEST_COMPRESSION);

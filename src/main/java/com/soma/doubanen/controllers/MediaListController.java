@@ -2,18 +2,24 @@ package com.soma.doubanen.controllers;
 
 import com.soma.doubanen.domains.dto.MediaDto;
 import com.soma.doubanen.domains.dto.MediaListDto;
+import com.soma.doubanen.domains.entities.ImageEntity;
 import com.soma.doubanen.domains.entities.MediaEntity;
 import com.soma.doubanen.domains.entities.MediaListEntity;
+import com.soma.doubanen.domains.entities.UserEntity;
+import com.soma.doubanen.domains.enums.ImageType;
 import com.soma.doubanen.mappers.Mapper;
+import com.soma.doubanen.services.ImageService;
 import com.soma.doubanen.services.MediaListService;
 import com.soma.doubanen.services.TokenService;
 import com.soma.doubanen.services.UserService;
+import java.io.IOException;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 @RestController
 @RequestMapping(path = "/media-lists")
@@ -22,6 +28,8 @@ public class MediaListController {
   private final MediaListService mediaListService;
   private final TokenService tokenService;
   private final UserService userService;
+
+  private final ImageService imageService;
   private final Mapper<MediaListEntity, MediaListDto> mediaListMapper;
 
   private final Mapper<MediaEntity, MediaDto> mediaMapper;
@@ -30,30 +38,50 @@ public class MediaListController {
       MediaListService mediaListService,
       TokenService tokenService,
       UserService userService,
+      ImageService imageService,
       Mapper<MediaListEntity, MediaListDto> mediaListMapper,
       Mapper<MediaEntity, MediaDto> mediaMapper) {
     this.mediaListService = mediaListService;
     this.tokenService = tokenService;
     this.userService = userService;
+    this.imageService = imageService;
     this.mediaListMapper = mediaListMapper;
     this.mediaMapper = mediaMapper;
   }
 
-  @PostMapping()
-  public ResponseEntity<MediaListDto> createMediaList(
-      @RequestBody MediaListDto mediaListDto, @RequestHeader(name = "Authorization") String auth)
-      throws Exception {
+  @PostMapping(consumes = {"multipart/form-data"})
+  public ResponseEntity<?> createMediaList(
+      @ModelAttribute MediaListDto mediaListDto,
+      @RequestParam(value = "image", required = false) MultipartFile image,
+      @RequestParam("userId") Long userId,
+      @RequestHeader(name = "Authorization") String auth) {
     String token = auth.substring(7);
     String username = tokenService.extractUsername(token);
-    if (!username.equals(userService.getUsernameById(mediaListDto.getUser().getId())))
+    if (!username.equals(userService.getUsernameById(userId)))
       return new ResponseEntity<>(HttpStatus.UNAUTHORIZED);
+    Optional<UserEntity> user = userService.findOne(userId);
+    if (user.isEmpty()) {
+      return new ResponseEntity<>("Invalid User Id", HttpStatus.BAD_REQUEST);
+    }
     MediaListEntity mediaList = mediaListMapper.mapFrom(mediaListDto);
-    Optional<MediaListEntity> result = mediaListService.save(mediaList, null);
-    return result
-        .map(
-            mediaListEntity ->
-                new ResponseEntity<>(mediaListMapper.mapTo(mediaListEntity), HttpStatus.CREATED))
-        .orElseGet(() -> new ResponseEntity<>(HttpStatus.BAD_REQUEST));
+    mediaList.setUserEntity(user.get());
+    try {
+      mediaList = mediaListService.save(mediaList, null);
+    } catch (Exception e) {
+      return (new ResponseEntity<>("Error save mediaList: " + e, HttpStatus.INTERNAL_SERVER_ERROR));
+    }
+    if (image != null) {
+      if (FailedToSaveImageToList(image, mediaList))
+        return new ResponseEntity<>("Error save image", HttpStatus.INTERNAL_SERVER_ERROR);
+      try {
+        MediaListEntity optionalMediaList = mediaListService.save(mediaList, mediaList.getId());
+        return new ResponseEntity<>(mediaListMapper.mapTo(optionalMediaList), HttpStatus.CREATED);
+      } catch (Exception e) {
+        return (new ResponseEntity<>(
+            "Error save image to list: " + e, HttpStatus.INTERNAL_SERVER_ERROR));
+      }
+    }
+    return new ResponseEntity<>(mediaListMapper.mapTo(mediaList), HttpStatus.CREATED);
   }
 
   @GetMapping(path = "/{id}")
@@ -74,26 +102,69 @@ public class MediaListController {
     return mediaLists.stream().map(mediaListMapper::mapTo).collect(Collectors.toList());
   }
 
-  @PutMapping(path = "/{id}")
+  @PutMapping(
+      path = "/{id}",
+      consumes = {"multipart/form-data"})
   public ResponseEntity<MediaListDto> updateMediaList(
       @PathVariable("id") Long id,
-      @RequestBody MediaListDto mediaListDto,
-      @RequestHeader(name = "Authorization") String auth)
-      throws Exception {
-    if (mediaListService.notExists(id)) {
+      @ModelAttribute MediaListDto mediaListDto,
+      @RequestParam("userId") Long userId,
+      @RequestParam(value = "image", required = false) MultipartFile image,
+      @RequestHeader(name = "Authorization") String auth) {
+    Optional<MediaListEntity> mediaListEntity = mediaListService.findOne(id);
+    if (mediaListEntity.isEmpty()) {
       return new ResponseEntity<>(HttpStatus.NOT_FOUND);
     }
     String token = auth.substring(7);
     String username = tokenService.extractUsername(token);
-    if (!username.equals(userService.getUsernameById(mediaListDto.getUser().getId())))
+    if (!username.equals(userService.getUsernameById(userId)))
       return new ResponseEntity<>(HttpStatus.UNAUTHORIZED);
+    Optional<UserEntity> user = userService.findOne(userId);
+    if (user.isEmpty()) {
+      return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
+    }
     MediaListEntity entity = mediaListMapper.mapFrom(mediaListDto);
-    Optional<MediaListEntity> result = mediaListService.save(entity, id);
-    return result
-        .map(
-            mediaListEntity ->
-                new ResponseEntity<>(mediaListMapper.mapTo(mediaListEntity), HttpStatus.CREATED))
-        .orElseGet(() -> new ResponseEntity<>(HttpStatus.BAD_REQUEST));
+    MediaListEntity result;
+    entity.setUserEntity(user.get());
+    entity.setImageUrl(mediaListEntity.get().getImageUrl());
+    entity.setMediaEntities(mediaListEntity.get().getMediaEntities());
+    try {
+      result = mediaListService.save(entity, id);
+    } catch (Exception e) {
+      return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
+    }
+    if (image != null) {
+      if (FailedToSaveImageToList(image, result))
+        return new ResponseEntity<>(null, HttpStatus.INTERNAL_SERVER_ERROR);
+      try {
+        MediaListEntity optionalMediaList = mediaListService.save(result, result.getId());
+        return new ResponseEntity<>(mediaListMapper.mapTo(optionalMediaList), HttpStatus.CREATED);
+      } catch (Exception e) {
+        return (new ResponseEntity<>(HttpStatus.BAD_REQUEST));
+      }
+    } else {
+      return new ResponseEntity<>(mediaListMapper.mapTo(result), HttpStatus.CREATED);
+    }
+  }
+
+  private boolean FailedToSaveImageToList(
+      @RequestParam(value = "image", required = false) MultipartFile image,
+      MediaListEntity result) {
+    byte[] data;
+    try {
+      data = imageService.compressImage(image.getBytes());
+    } catch (IOException e) {
+      return true;
+    }
+    ImageEntity imageEntity =
+        ImageEntity.builder()
+            .imageData(data)
+            .objectId(result.getId())
+            .type(ImageType.MediaListCover)
+            .build();
+    ImageEntity savedImage = imageService.save(imageEntity);
+    result.setImageUrl("/images/" + savedImage.getId());
+    return false;
   }
 
   @PatchMapping(path = "/{id}")

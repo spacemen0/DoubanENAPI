@@ -4,6 +4,7 @@ import com.soma.doubanen.domains.dto.ReviewDto;
 import com.soma.doubanen.domains.entities.ReviewEntity;
 import com.soma.doubanen.domains.entities.UserEntity;
 import com.soma.doubanen.mappers.Mapper;
+import java.util.ArrayList;
 import org.modelmapper.ModelMapper;
 import org.springframework.stereotype.Component;
 
@@ -19,7 +20,9 @@ public class ReviewMapperImpl implements Mapper<ReviewEntity, ReviewDto> {
   public ReviewDto mapTo(ReviewEntity reviewEntity) {
     UserEntity user = reviewEntity.getUser();
     user.setPassword(null);
+    user.setEmail(null);
     reviewEntity.setUser(user);
+    reviewEntity.setLikedUsers(new ArrayList<>());
     return modelMapper.map(reviewEntity, ReviewDto.class);
   }
 
